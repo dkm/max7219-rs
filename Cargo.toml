@@ -1,0 +1,11 @@
+[package]
+name = "max7219"
+version = "0.1.0"
+authors = ["Marc Poulhiès <dkm@kataplop.net>"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+
+[dependencies.embedded-hal]
+version = "0.1.1"
+features = ["unproven"]
