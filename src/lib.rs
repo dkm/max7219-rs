@@ -24,10 +24,10 @@ enum Max7219Regs {
     Digit6 = 0x7,
     Digit7 = 0x8,
     DecodeMode = 0x9,
-    Intensity = 0xa,
+    _Intensity = 0xa,
     ScanLimit = 0xb,
     Shutdown = 0xc,
-    DisplayTest = 0xf,
+    _DisplayTest = 0xf,
 }
 
 impl From<u8> for Max7219Regs {
@@ -48,7 +48,7 @@ impl From<u8> for Max7219Regs {
 
 /// empty
 #[derive(Clone, Copy, PartialEq)]
-pub struct Max7219<S: hal::spi::FullDuplex<u8>, P: hal::digital::OutputPin> {
+pub struct Max7219<S,P> {
     /// bob
     spi : S,
     cs : P,
@@ -68,8 +68,18 @@ where S: hal::spi::FullDuplex<u8>,
 
     fn set_reg(&mut self, reg: Max7219Regs, val: u8) {
         self.cs.set_low();
-        block!(self.spi.send(reg as u8)).unwrap();
-        block!(self.spi.send(val)).unwrap();
+
+        // FIXME: looks ugly, need to handle this correctly.
+
+        // using unwrap() does not work as underlying Error do not
+        // implement the Debug trait...
+        match block!(self.spi.send(reg as u8)) {
+            _ => {}
+        }
+        match block!(self.spi.send(val)) {
+            _ => {}
+        }
+
         self.cs.set_high();
     }
 
