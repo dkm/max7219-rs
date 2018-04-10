@@ -24,10 +24,10 @@ enum Max7219Regs {
     Digit6 = 0x7,
     Digit7 = 0x8,
     DecodeMode = 0x9,
-    _Intensity = 0xa,
+    Intensity = 0xa,
     ScanLimit = 0xb,
     Shutdown = 0xc,
-    _DisplayTest = 0xf,
+    DisplayTest = 0xf,
 }
 
 impl From<u8> for Max7219Regs {
@@ -91,10 +91,23 @@ where S: hal::spi::FullDuplex<u8>,
     /// bob
     pub fn init(&mut self) {
         self.cs.set_high();
-        
+
+        // Shutdown
         self.set_reg(Max7219Regs::Shutdown, 0);
-        self.set_reg(Max7219Regs::Shutdown, 1);
+
+        // Midpower intensity
+        self.set_reg(Max7219Regs::Intensity, 0x4);
+
+        // Disable test mode
+        self.set_reg(Max7219Regs::DisplayTest, 0x0);
+
+        // Disable char decoding
         self.set_reg(Max7219Regs::DecodeMode, 0);
+
+        // Display all digit
         self.set_reg(Max7219Regs::ScanLimit, 0x07);
+
+        // Enable
+        self.set_reg(Max7219Regs::Shutdown, 1);
     }
 }
