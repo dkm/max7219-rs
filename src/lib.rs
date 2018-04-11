@@ -10,8 +10,6 @@ extern crate embedded_hal as hal;
 #[macro_use(block)]
 extern crate nb;
 
-//use hal::spi::{FullDuplex};
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Max7219Regs {
     NoOp = 0x0,
@@ -46,7 +44,7 @@ impl From<u8> for Max7219Regs {
     }
 }
 
-/// empty
+/// Device descriptor
 #[derive(Clone, Copy, PartialEq)]
 pub struct Max7219<S,P> {
     /// bob
@@ -58,7 +56,7 @@ impl<S,P> Max7219<S,P>
 where S: hal::spi::FullDuplex<u8>,
       P: hal::digital::OutputPin {
 
-    /// bob
+    /// Creates a new device descriptor
     pub fn new(spi: S, cs: P) -> Max7219<S,P> {
         Max7219 {
             spi : spi,
@@ -83,12 +81,12 @@ where S: hal::spi::FullDuplex<u8>,
         self.cs.set_high();
     }
 
-    /// bob
+    /// Writes a line
     pub fn write_line(&mut self, line: u8, val: u8) {
         self.set_reg(Max7219Regs::from(line), val);
     }
 
-    /// bob
+    /// Initializes the device
     pub fn init(&mut self) {
         self.cs.set_high();
 
