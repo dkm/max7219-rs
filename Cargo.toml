@@ -3,9 +3,10 @@ name = "max7219"
 version = "0.1.0"
 authors = ["Marc Poulhiès <dkm@kataplop.net>"]
 license = "MIT OR Apache-2.0"
-
-[dependencies]
-
+categories = ["embedded", "hardware-support"]
+keywords = ["max7219"]
+repository = "http://github.com/dkm/max7219-rs.git"
+description = "A simple driver for the max7219 from 'maxim integrated'. Mainly focused on the 8x8 LED matrix"
 
 [dependencies.nb]
 version = "0.1.1"
