@@ -119,8 +119,6 @@ where S: hal::spi::FullDuplex<u8>,
     }
 
     fn set_reg(&mut self, reg: Max7219Regs, val: u8) {
-        self.cs.set_low();
-
         // FIXME: looks ugly, need to handle this correctly.
 
         // using unwrap() does not work as underlying Error do not
@@ -132,48 +130,72 @@ where S: hal::spi::FullDuplex<u8>,
             _ => {}
         }
 
-        self.cs.set_high();
     }
 
     /// Writes a line
     pub fn write_lines(&mut self, line_index: u8, vals: &[u8]) {
+        self.cs.set_low();
         for i in 0..self.num {
             self.set_reg(Max7219Regs::from(line_index), vals[i as usize]);
         }
+        self.cs.set_high();
+
     }
 
     /// Writes a pixel buffer
     pub fn write_pixbufs(&mut self, pixbufs: &[PixArray]) {
         for l in 0..8 {
             let line = Max7219Regs::from(l);
+            self.cs.set_low();
             for i in (0..self.num).rev() {
                 self.set_reg(line, pixbufs[i as usize].get_pixel_line(l as usize));
             }
+            self.cs.set_high();
         }
     }
 
     /// Initializes the device
     pub fn init(&mut self) {
+        self.cs.set_low();
         for _i in 0..self.num {
-            self.cs.set_high();
-
             // Shutdown
             self.set_reg(Max7219Regs::Shutdown, 0);
+        }
+        self.cs.set_high();
 
+        self.cs.set_low();
+        for _i in 0..self.num {
             // Midpower intensity
             self.set_reg(Max7219Regs::Intensity, 0x4);
+        }
+        self.cs.set_high();
 
+        self.cs.set_low();
+        for _i in 0..self.num {
             // Disable test mode
             self.set_reg(Max7219Regs::DisplayTest, 0x0);
+        }
+        self.cs.set_high();
 
+        self.cs.set_low();
+        for _i in 0..self.num {
             // Disable char decoding
             self.set_reg(Max7219Regs::DecodeMode, 0);
+        }
+        self.cs.set_high();
 
+        self.cs.set_low();
+        for _i in 0..self.num {
             // Display all digit
             self.set_reg(Max7219Regs::ScanLimit, 0x07);
+        }
+        self.cs.set_high();
 
+        self.cs.set_low();
+        for _i in 0..self.num {
             // Enable
             self.set_reg(Max7219Regs::Shutdown, 1);
         }
+        self.cs.set_high();
     }
 }
