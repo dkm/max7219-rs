@@ -4,6 +4,7 @@
 #![deny(warnings)]
 #![feature(never_type)]
 #![no_std]
+#![feature(reverse_bits)]
 
 extern crate embedded_hal as hal;
 
@@ -45,7 +46,7 @@ macro_rules! max7219_mac {
 
             /// From char
             pub fn from(c : char) -> [u8;8] {
-                match c {
+                let mut ret : [u8;8]  = match c {
                     '1' => [0b00000000,
                             0b00011000,
                             0b00011000,
@@ -1008,13 +1009,17 @@ macro_rules! max7219_mac {
                     //                            0b01000001,
                     //                            0b01111111],
                     _ => [0;8]
+                };
+                for x in &mut ret {
+                    *x = (*x).reverse_bits();
                 }
+                ret
             }
 
             /// Bob
             pub fn fromstr(&mut self, s: &str) {
                 for i in 0..$size {
-                    self.pixels[i] = PixArray::from(s.as_bytes()[$size - i -1] as char);
+                    self.pixels[i] = PixArray::from(s.as_bytes()[i] as char);
                 }
             }
 
@@ -1036,6 +1041,38 @@ macro_rules! max7219_mac {
             /// Get line
             pub fn get_pixel_line(&self, block: usize, l : usize) -> u8 {
                 self.pixels[block][l]
+            }
+
+            /// Bob
+            pub fn lshift(&mut self, rotate : bool) {
+                for line in 0..8 {
+                    let mut inp = if rotate { self.pixels[0][line] & 1 } else { 0 };
+                    let mut outp;
+
+                    for block in (0..$size).rev() {
+                        let mut v = self.pixels[block][line];
+                        outp = v & 1;
+                        v = (inp<<7) | (v>>1);
+                        self.pixels[block][line] = v;
+                        inp = outp;
+                    }
+                }
+            }
+
+            /// Bob
+            pub fn rshift(&mut self, rotate : bool) {
+                for line in 0..8 {
+                    let mut inp = if rotate { (self.pixels[$size-1][line] & (1<<7))>>7 } else { 0 };
+                    let mut outp;
+
+                    for block in 0..$size {
+                        let mut v = self.pixels[block][line];
+                        outp = (v & (1<<7))>>7;
+                        v = inp | (v<<1);
+                        self.pixels[block][line] = v;
+                        inp = outp;
+                    }
+                }
             }
 
             // Set line
@@ -1107,7 +1144,7 @@ macro_rules! max7219_mac {
             /// Writes a pixel buffer
             pub fn write_pixbuf(&mut self, pixbuf: &PixArray) {
                 for l in 0..8 {
-                    let line = Max7219Regs::from(l);
+                    let line = Max7219Regs::from(8-l);
                     self.cs.set_low();
                     for i in (0..$size).rev() {
                         self.set_reg(line, pixbuf.get_pixel_line(i ,l as usize));
