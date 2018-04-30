@@ -1144,7 +1144,7 @@ macro_rules! max7219_mac {
             /// Writes a pixel buffer
             pub fn write_pixbuf(&mut self, pixbuf: &PixArray) {
                 for l in 0..8 {
-                    let line = Max7219Regs::from(8-l);
+                    let line = Max7219Regs::from(7-l);
                     self.cs.set_low();
                     for i in (0..$size).rev() {
                         self.set_reg(line, pixbuf.get_pixel_line(i ,l as usize));
