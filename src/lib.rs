@@ -1023,6 +1023,14 @@ macro_rules! max7219_mac {
                 }
             }
 
+            /// Bob
+            pub fn fromarr(&mut self, s: &[u8]) {
+                for i in 0..$size {
+                    self.pixels[i] = PixArray::from(s[i] as char);
+                }
+            }
+
+
             /// set pixel
             pub fn set_pixel(&mut self, line : usize, col : usize , v : bool) {
                 let block = col / 8;
