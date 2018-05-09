@@ -1087,10 +1087,35 @@ macro_rules! max7219_mac {
                 }
             }
 
-            // Set line
-            // pub fn set_pixel_line(&mut self, l : usize, v: u8) {
-            //     self.pixels[l] = v;
-            // }
+            /// Shifts down the pixel buffer. If `rotate` is true,
+            /// performs a rotation (ie. pixels going out at the bottom
+            /// are used for the new pixels at the top).
+            pub fn dshift(&mut self, rotate : bool) {
+                for block in 0..$size {
+                    let mut prev_line = if rotate { self.pixels[block][7] } else { 0u8 };
+
+                    for line in 0..8 {
+                        let cur_line = self.pixels[block][line];
+                        self.pixels[block][line] = prev_line;
+                        prev_line = cur_line;
+                    }
+                }
+            }
+
+            /// Shifts up the pixel buffer. If `rotate` is true,
+            /// performs a rotation (ie. pixels going out at the top
+            /// are used for the new pixels at the bottom).
+            pub fn ushift(&mut self, rotate : bool) {
+                for block in 0..$size {
+                    let mut prev_line = if rotate { self.pixels[block][0] } else { 0u8 };
+
+                    for line in (0..8).rev() {
+                        let cur_line = self.pixels[block][line];
+                        self.pixels[block][line] = prev_line;
+                        prev_line = cur_line;
+                    }
+                }
+            }
         }
 
         impl From<u8> for Max7219Regs {
