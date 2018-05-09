@@ -32,20 +32,21 @@ enum Max7219Regs {
 
 macro_rules! max7219_mac {
     ($size:expr) => {
-        /// Nada
+
+        /// Pixels of all the LED matrices
         pub struct PixArray {
             pixels : [[u8;8]; $size]
         }
 
         impl PixArray {
 
-            /// Creates new pix
+            /// Creates a new and empty pixel buffer.
             pub fn new() -> PixArray {
                 PixArray { pixels: [[0;8];$size] }
             }
 
-            /// From char
-            pub fn from(c : char) -> [u8;8] {
+            /// Returns a single block from a character.
+            fn from(c : char) -> [u8;8] {
                 let mut ret : [u8;8]  = match c {
                     '1' => [0b00000000,
                             0b00011000,
@@ -1016,22 +1017,21 @@ macro_rules! max7219_mac {
                 ret
             }
 
-            /// Bob
+            /// Modify the pixel buffer to match `s` string content.
             pub fn fromstr(&mut self, s: &str) {
                 for i in 0..$size {
                     self.pixels[i] = PixArray::from(s.as_bytes()[i] as char);
                 }
             }
 
-            /// Bob
+            /// Modify the pixel buffer to match `s` byte array content.
             pub fn fromarr(&mut self, s: &[u8]) {
                 for i in 0..$size {
                     self.pixels[i] = PixArray::from(s[i] as char);
                 }
             }
 
-
-            /// set pixel
+            /// Sets the value to `v` for the pixel at position `line`, `col`.
             pub fn set_pixel(&mut self, line : usize, col : usize , v : bool) {
                 let block = col / 8;
                 if v {
@@ -1041,17 +1041,19 @@ macro_rules! max7219_mac {
                 }
             }
 
-            /// get pixel
+            /// Gets the value of the pixel at position `line`, `col`.
             pub fn get_pixel(&self, line : usize, col : usize) -> u8 {
                 self.pixels[col / 8][line] & (1<<col) as u8
             }
 
-            /// Get line
+            /// Gets the values of pixels in LED block `block` and line `l`.
             pub fn get_pixel_line(&self, block: usize, l : usize) -> u8 {
                 self.pixels[block][l]
             }
 
-            /// Bob
+            /// Shifts left the pixel buffer. If `rotate` is true,
+            /// performs a rotation (ie. pixels going out on the left
+            /// are used for the new pixels on the right).
             pub fn lshift(&mut self, rotate : bool) {
                 for line in 0..8 {
                     let mut inp = if rotate { self.pixels[0][line] & 1 } else { 0 };
@@ -1067,7 +1069,9 @@ macro_rules! max7219_mac {
                 }
             }
 
-            /// Bob
+            /// Shifts right the pixel buffer. If `rotate` is true,
+            /// performs a rotation (ie. pixels going out on the right
+            /// are used for the new pixels on the left).
             pub fn rshift(&mut self, rotate : bool) {
                 for line in 0..8 {
                     let mut inp = if rotate { (self.pixels[$size-1][line] & (1<<7))>>7 } else { 0 };
@@ -1108,7 +1112,6 @@ macro_rules! max7219_mac {
         /// Device descriptor
         #[derive(Clone, Copy, PartialEq)]
         pub struct Max7219<S,P> {
-            /// bob
             spi : S,
             cs : P,
         }
