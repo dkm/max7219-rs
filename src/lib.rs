@@ -6,9 +6,13 @@
 #![no_std]
 #![feature(reverse_bits)]
 
+
 extern crate embedded_hal as hal;
 
-#[macro_use(block)]
+use hal::blocking::spi;
+use hal::digital::OutputPin;
+
+//#[macro_use(block)]
 extern crate nb;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -46,8 +50,17 @@ macro_rules! max7219_mac {
             }
 
             /// Returns a single block from a character.
-            fn from(c : char) -> [u8;8] {
+            fn from(c : char) -> Result<[u8;8],()> {
                 let mut ret : [u8;8]  = match c {
+                    ' ' => [0b00000000,
+                            0b00000000,
+                            0b00000000,
+                            0b00000000,
+                            0b00000000,
+                            0b00000000,
+                            0b00000000,
+                            0b00000000],
+
                     '1' => [0b00000000,
                             0b00011000,
                             0b00011000,
@@ -1009,46 +1022,49 @@ macro_rules! max7219_mac {
                     //                            0b01000001,
                     //                            0b01000001,
                     //                            0b01111111],
-                    _ => [0;8]
+                    _ => return Err(())
                 };
                 for x in &mut ret {
                     *x = (*x).reverse_bits();
                 }
-                ret
+                Ok(ret)
             }
 
             /// Modify the pixel buffer to match `s` string content.
-            pub fn fromstr(&mut self, s: &str) {
+            pub fn fromstr(&mut self, s: &str) -> Result<(),()> {
                 for i in 0..$size {
-                    self.pixels[i] = PixArray::from(s.as_bytes()[i] as char);
+                    self.pixels[i] = PixArray::from(s.as_bytes()[i] as char)?;
                 }
+                Ok(())
             }
 
             /// Modify the pixel buffer to match `s` byte array content.
-            pub fn fromarr(&mut self, s: &[u8]) {
+            pub fn fromarr(&mut self, s: &[u8]) -> Result<(),()>{
                 for i in 0..$size {
-                    self.pixels[i] = PixArray::from(s[i] as char);
+                    self.pixels[i] = PixArray::from(s[i] as char)?;
                 }
+                Ok(())
             }
 
             /// Sets the value to `v` for the pixel at position `line`, `col`.
-            pub fn set_pixel(&mut self, line : usize, col : usize , v : bool) {
+            pub fn set_pixel(&mut self, line : usize, col : usize , v : bool) -> Result<(),()> {
                 let block = col / 8;
                 if v {
                     self.pixels[block][line] |= 1<<col;
                 } else {
                     self.pixels[block][line] &= !(1<<col );
                 }
+                Ok(())
             }
 
             /// Gets the value of the pixel at position `line`, `col`.
-            pub fn get_pixel(&self, line : usize, col : usize) -> u8 {
-                self.pixels[col / 8][line] & (1<<col) as u8
+            pub fn get_pixel(&self, line : usize, col : usize) -> Result<u8,()> {
+                Ok(self.pixels[col / 8][line] & (1<<col) as u8)
             }
 
             /// Gets the values of pixels in LED block `block` and line `l`.
-            pub fn get_pixel_line(&self, block: usize, l : usize) -> u8 {
-                self.pixels[block][l]
+            pub fn get_pixel_line(&self, block: usize, l : usize) -> Result<u8,()> {
+                Ok(self.pixels[block][l])
             }
 
             /// Shifts left the pixel buffer. If `rotate` is true,
@@ -1134,104 +1150,115 @@ macro_rules! max7219_mac {
             }
         }
 
+
+        /// Errors
+        #[derive(Debug)]
+        pub enum Error<E> {
+            /// SPI bus error
+            Spi(E),
+        }
+
         /// Device descriptor
         #[derive(Clone, Copy, PartialEq)]
-        pub struct Max7219<S,P> {
-            spi : S,
+        pub struct Max7219<SPI,P>
+        {
+            spi : SPI,
             cs : P,
         }
 
-        impl<S,P> Max7219<S,P>
-            where S: hal::spi::FullDuplex<u8>,
-                  P: hal::digital::OutputPin {
+        impl<SPI,P,E> Max7219<SPI,P>
+            where SPI: spi::Write<u8,Error = E>,
+                  P: OutputPin {
 
             /// Creates a new device descriptor
-            pub fn new(spi: S, cs: P) -> Max7219<S,P> {
-                Max7219 {
+            pub fn new(spi: SPI, cs: P) -> Result<Self, E> {
+                let dev = Max7219 {
                     spi : spi,
                     cs : cs,
-                }
+                };
+                Ok(dev)
             }
 
-            fn set_reg(&mut self, reg: Max7219Regs, val: u8) {
+            fn set_reg(&mut self, reg: Max7219Regs, val: u8) -> Result<(), E> {
                 // FIXME: looks ugly, need to handle this correctly.
 
                 // using unwrap() does not work as underlying Error do not
                 // implement the Debug trait...
-                match block!(self.spi.send(reg as u8)) {
-                    _ => {}
-                }
-                match block!(self.spi.send(val)) {
-                    _ => {}
-                }
+                self.spi.write(&[reg as u8])?;
+                self.spi.write(&[val])?;
 
+                Ok(())
             }
 
             /// Writes a line
-            pub fn write_lines(&mut self, line_index: u8, vals: &[u8]) {
+            pub fn write_lines(&mut self, line_index: u8, vals: &[u8]) -> Result<(),E> {
                 self.cs.set_low();
                 for i in 0..$size {
-                    self.set_reg(Max7219Regs::from(line_index), vals[i as usize]);
+                    self.set_reg(Max7219Regs::from(line_index), vals[i as usize])?;
                 }
                 self.cs.set_high();
 
+                Ok(())
             }
 
             /// Writes a pixel buffer
-            pub fn write_pixbuf(&mut self, pixbuf: &PixArray) {
+            pub fn write_pixbuf(&mut self, pixbuf: &PixArray) -> Result<(),E>{
                 for l in 0..8 {
                     let line = Max7219Regs::from(7-l);
                     self.cs.set_low();
                     for i in (0..$size).rev() {
-                        self.set_reg(line, pixbuf.get_pixel_line(i ,l as usize));
+                        self.set_reg(line, pixbuf.get_pixel_line(i ,l as usize).unwrap() )?;
                     }
                     self.cs.set_high();
                 }
+                Ok(())
             }
 
             /// Initializes the device
-            pub fn init(&mut self) {
+            pub fn init(&mut self) -> Result<(),E>{
                 self.cs.set_low();
                 for _i in 0..$size {
                     // Shutdown
-                    self.set_reg(Max7219Regs::Shutdown, 0);
+                    self.set_reg(Max7219Regs::Shutdown, 0)?;
                 }
                 self.cs.set_high();
 
                 self.cs.set_low();
                 for _i in 0..$size {
                     // Midpower intensity
-                    self.set_reg(Max7219Regs::Intensity, 0x4);
+                    self.set_reg(Max7219Regs::Intensity, 0x4)?;
                 }
                 self.cs.set_high();
 
                 self.cs.set_low();
                 for _i in 0..$size {
                     // Disable test mode
-                    self.set_reg(Max7219Regs::DisplayTest, 0x0);
+                    self.set_reg(Max7219Regs::DisplayTest, 0x0)?;
                 }
                 self.cs.set_high();
 
                 self.cs.set_low();
                 for _i in 0..$size {
                     // Disable char decoding
-                    self.set_reg(Max7219Regs::DecodeMode, 0);
+                    self.set_reg(Max7219Regs::DecodeMode, 0)?;
                 }
                 self.cs.set_high();
 
                 self.cs.set_low();
                 for _i in 0..$size {
                     // Display all digit
-                    self.set_reg(Max7219Regs::ScanLimit, 0x07);
+                    self.set_reg(Max7219Regs::ScanLimit, 0x07)?;
                 }
                 self.cs.set_high();
 
                 self.cs.set_low();
                 for _i in 0..$size {
                     // Enable
-                    self.set_reg(Max7219Regs::Shutdown, 1);
+                    self.set_reg(Max7219Regs::Shutdown, 1)?;
                 }
                 self.cs.set_high();
+
+                Ok(())
             }
         }
     }
