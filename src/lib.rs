@@ -50,7 +50,7 @@ macro_rules! max7219_mac {
             }
 
             /// Returns a single block from a character.
-            fn from(c : char) -> Result<[u8;8],()> {
+            pub fn from(c : char) -> Result<[u8;8],()> {
                 let mut ret : [u8;8]  = match c {
                     ' ' => [0b00000000,
                             0b00000000,
@@ -1030,11 +1030,6 @@ macro_rules! max7219_mac {
                 Ok(ret)
             }
 
-            /// Clears the pixel buffer
-            pub fn clear(&mut self) {
-                self.pixels = [[0u8;8];$size];
-            }
-
             /// Modify the pixel buffer to match `s` string content.
             pub fn fromstr(&mut self, s: &str) -> Result<(),()> {
                 for i in 0..$size {
@@ -1049,6 +1044,18 @@ macro_rules! max7219_mac {
                     self.pixels[i] = PixArray::from(s[i] as char)?;
                 }
                 Ok(())
+            }
+
+            /// Clears the pixel buffer
+            pub fn clear(&mut self) {
+                self.pixels = [[0u8;8];$size];
+            }
+
+            /// Does the union
+            pub fn union(&mut self, block: usize, o: &[u8;8]) {
+                for i in 0..8 {
+                    self.pixels[block][i] |= o[i];
+                }
             }
 
             /// Sets the value to `v` for the pixel at position `line`, `col`.
