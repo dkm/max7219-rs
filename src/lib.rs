@@ -1030,6 +1030,11 @@ macro_rules! max7219_mac {
                 Ok(ret)
             }
 
+            /// Clears the pixel buffer
+            pub fn clear(&mut self) {
+                self.pixels = [[0u8;8];$size];
+            }
+
             /// Modify the pixel buffer to match `s` string content.
             pub fn fromstr(&mut self, s: &str) -> Result<(),()> {
                 for i in 0..$size {
