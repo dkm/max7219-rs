@@ -34,6 +34,14 @@ enum Max7219Regs {
 }
 
 
+// macro_rules! maxv {
+//     ($v1:expr, $v2:expr) =>(if $v1 > $v2 { $v1 } else { $v2 })
+// }
+macro_rules! minv {
+    ($v1:expr, $v2:expr) =>(if $v1 < $v2 { $v1 } else { $v2 })
+}
+
+
 macro_rules! max7219_mac {
     ($size:expr) => {
 
@@ -1032,7 +1040,7 @@ macro_rules! max7219_mac {
 
             /// Modify the pixel buffer to match `s` string content.
             pub fn fromstr(&mut self, s: &str) -> Result<(),()> {
-                for i in 0..$size {
+                for i in 0..minv!($size, s.len()) {
                     self.pixels[i] = PixArray::from(s.as_bytes()[i] as char)?;
                 }
                 Ok(())
@@ -1040,7 +1048,7 @@ macro_rules! max7219_mac {
 
             /// Modify the pixel buffer to match `s` byte array content.
             pub fn fromarr(&mut self, s: &[u8]) -> Result<(),()>{
-                for i in 0..$size {
+                for i in 0..minv!($size,s.len()) {
                     self.pixels[i] = PixArray::from(s[i] as char)?;
                 }
                 Ok(())
@@ -1205,7 +1213,7 @@ macro_rules! max7219_mac {
             /// Writes a line
             pub fn write_lines(&mut self, line_index: u8, vals: &[u8]) -> Result<(),E> {
                 self.cs.set_low();
-                for i in 0..$size {
+                for i in 0..minv!($size, vals.len()) {
                     self.set_reg(Max7219Regs::from(line_index), vals[i as usize])?;
                 }
                 self.cs.set_high();
